@@ -49,6 +49,21 @@ func LookupVideoBillingResolution(resolution string) (string, bool) {
 		return VideoBillingResolution1080P, true
 	case "2k", "2048", "2048p":
 		return VideoBillingResolution2K, true
+	default:
+		return "", false
+	}
+}
+
+// LookupChannelVideoBillingResolution resolves the broader resolution labels
+// used by channel-managed video pricing. Legacy Grok pricing intentionally
+// keeps the narrower LookupVideoBillingResolution contract.
+func LookupChannelVideoBillingResolution(resolution string) (string, bool) {
+	if normalized, ok := LookupVideoBillingResolution(resolution); ok {
+		return normalized, true
+	}
+	switch strings.ToLower(strings.TrimSpace(resolution)) {
+	case "2k", "2048", "2048p":
+		return VideoBillingResolution2K, true
 	case "4k", "2160", "2160p":
 		return VideoBillingResolution4K, true
 	default:

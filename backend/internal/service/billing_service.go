@@ -1114,7 +1114,7 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 }
 
 func (s *BillingService) calculateVideoCost(resolved *ResolvedPricing, input CostInput) (*CostBreakdown, error) {
-	resolution, ok := LookupVideoBillingResolution(input.SizeTier)
+	resolution, ok := LookupChannelVideoBillingResolution(input.SizeTier)
 	if !ok {
 		return nil, fmt.Errorf("video resolution is unavailable for model %s: %w", input.Model, ErrModelPricingUnavailable)
 	}
