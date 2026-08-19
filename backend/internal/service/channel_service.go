@@ -706,7 +706,16 @@ func validatePricingBillingMode(pricing []ChannelModelPricing) error {
 }
 
 func checkBillingModeRequirements(p ChannelModelPricing) error {
-	if p.BillingMode == BillingModePerRequest || p.BillingMode == BillingModeImage || p.BillingMode == BillingModeVideo {
+	if p.BillingMode == BillingModeVideo {
+		if len(p.Intervals) == 0 {
+			return infraerrors.BadRequest("BILLING_MODE_MISSING_PRICE", "video billing requires resolution tiers")
+		}
+		if p.PerRequestPrice != nil {
+			return infraerrors.BadRequest("BILLING_MODE_INVALID_PRICE", "video billing does not accept per_request_price")
+		}
+		return nil
+	}
+	if p.BillingMode == BillingModePerRequest || p.BillingMode == BillingModeImage {
 		if p.PerRequestPrice == nil && len(p.Intervals) == 0 {
 			return infraerrors.BadRequest(
 				"BILLING_MODE_MISSING_PRICE",
@@ -740,6 +749,12 @@ func checkPricesNotNegative(p ChannelModelPricing) error {
 
 func checkIntervalsHavePrices(p ChannelModelPricing) error {
 	for _, iv := range p.Intervals {
+		if p.BillingMode == BillingModeVideo {
+			if strings.TrimSpace(iv.TierLabel) == "" || iv.PerSecondPrice == nil || *iv.PerSecondPrice < 0 {
+				return infraerrors.BadRequest("INTERVAL_MISSING_PRICE", fmt.Sprintf("video tier requires resolution label and non-negative per_second_price for model %v", p.Models))
+			}
+			continue
+		}
 		if iv.InputPrice == nil && iv.OutputPrice == nil &&
 			iv.CacheWritePrice == nil && iv.CacheReadPrice == nil &&
 			iv.PerRequestPrice == nil {

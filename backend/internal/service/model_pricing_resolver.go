@@ -311,7 +311,7 @@ func filterValidIntervals(intervals []PricingInterval) []PricingInterval {
 	for _, iv := range intervals {
 		if iv.InputPrice != nil || iv.OutputPrice != nil ||
 			iv.CacheWritePrice != nil || iv.CacheReadPrice != nil ||
-			iv.PerRequestPrice != nil {
+			iv.PerRequestPrice != nil || iv.PerSecondPrice != nil {
 			valid = append(valid, iv)
 		}
 	}
@@ -374,6 +374,20 @@ func (r *ModelPricingResolver) GetRequestTierPrice(resolved *ResolvedPricing, ti
 	for _, tier := range resolved.RequestTiers {
 		if tier.TierLabel == tierLabel && tier.PerRequestPrice != nil {
 			return *tier.PerRequestPrice
+		}
+	}
+	return 0
+}
+
+// GetVideoTierPerSecond returns the configured rate for a video resolution.
+// Video tiers are intentionally exact and never fall back to a lower resolution.
+func (r *ModelPricingResolver) GetVideoTierPerSecond(resolved *ResolvedPricing, resolution string) float64 {
+	if resolved == nil {
+		return 0
+	}
+	for _, tier := range resolved.RequestTiers {
+		if strings.EqualFold(strings.TrimSpace(tier.TierLabel), strings.TrimSpace(resolution)) && tier.PerSecondPrice != nil {
+			return *tier.PerSecondPrice
 		}
 	}
 	return 0

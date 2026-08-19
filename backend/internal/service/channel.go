@@ -130,6 +130,7 @@ type PricingInterval struct {
 	CacheWritePrice *float64  `json:"cache_write_price"`
 	CacheReadPrice  *float64  `json:"cache_read_price"`
 	PerRequestPrice *float64  `json:"per_request_price"`
+	PerSecondPrice  *float64  `json:"per_second_price"`
 	SortOrder       int       `json:"sort_order"`
 	CreatedAt       time.Time `json:"created_at,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at,omitempty"`

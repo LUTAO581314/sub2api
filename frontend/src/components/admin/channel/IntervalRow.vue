@@ -39,10 +39,10 @@
     <template v-else>
       <div class="w-24">
         <label class="text-xs text-gray-400">
-          {{ mode === 'image' ? t('admin.channels.form.resolution') : t('admin.channels.form.tierLabel') }}
+          {{ mode === 'image' || mode === 'video' ? t('admin.channels.form.resolution') : t('admin.channels.form.tierLabel') }}
         </label>
         <input :value="interval.tier_label" @input="emitField('tier_label', ($event.target as HTMLInputElement).value)"
-          type="text" class="input mt-0.5 text-xs" :placeholder="mode === 'image' ? '1K / 2K / 4K' : ''" />
+          type="text" class="input mt-0.5 text-xs" :placeholder="mode === 'video' ? '480p / 720p / 1080p / 2K / 4K' : (mode === 'image' ? '1K / 2K / 4K' : '')" />
       </div>
       <div class="w-20">
         <label class="text-xs text-gray-400">{{ t('admin.channels.form.minTokens') }}</label>
@@ -55,8 +55,8 @@
           type="number" min="0" class="input mt-0.5 text-xs" :placeholder="'∞'" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.perRequestPrice') }} <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$</span></label>
-        <input :value="interval.per_request_price" @input="emitField('per_request_price', ($event.target as HTMLInputElement).value)"
+        <label class="text-xs text-gray-400">{{ mode === 'video' ? '每秒价格' : t('admin.channels.form.perRequestPrice') }} <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">{{ mode === 'video' ? '$/s' : '$' }}</span></label>
+        <input :value="mode === 'video' ? interval.per_second_price : interval.per_request_price" @input="emitField(mode === 'video' ? 'per_second_price' : 'per_request_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
     </template>
@@ -93,7 +93,8 @@ const isEmpty = computed(() => {
     (iv.output_price == null || iv.output_price === '') &&
     (iv.cache_write_price == null || iv.cache_write_price === '') &&
     (iv.cache_read_price == null || iv.cache_read_price === '') &&
-    (iv.per_request_price == null || iv.per_request_price === '')
+    (iv.per_request_price == null || iv.per_request_price === '') &&
+    (iv.per_second_price == null || iv.per_second_price === '')
 })
 
 function emitField(field: keyof IntervalFormEntry, value: string | number | null) {

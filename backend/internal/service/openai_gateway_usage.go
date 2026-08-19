@@ -774,13 +774,17 @@ func (s *OpenAIGatewayService) calculateOpenAIVideoCost(
 			units = float64(videoCount * durationSeconds)
 		}
 		cost, err := s.billingService.CalculateCostUnified(CostInput{
-			Ctx:            ctx,
-			Model:          billingModel,
-			GroupID:        &gid,
-			Group:          apiKey.Group,
-			RequestCount:   videoCount,
-			UsageUnits:     units,
-			SizeTier:       resolution,
+			Ctx:                  ctx,
+			Model:                billingModel,
+			GroupID:              &gid,
+			Group:                apiKey.Group,
+			RequestCount:         videoCount,
+			UsageUnits:           units,
+			VideoCount:           videoCount,
+			VideoDurationSeconds: durationSeconds,
+			// Channel video tiers use strict matching; do not silently bill an
+			// unknown requested resolution at the legacy 480p fallback rate.
+			SizeTier:       result.VideoResolution,
 			RateMultiplier: multiplier,
 			Resolver:       s.resolver,
 			Resolved:       resolved,

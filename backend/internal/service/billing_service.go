@@ -1050,6 +1050,8 @@ type CostInput struct {
 	RequestCount              int     // 按次计费时使用
 	UsageUnits                float64 // 音频等连续计量单位（分钟/小时/百万字符）
 	SizeTier                  string  // 按次/图片模式的层级标签（"1K","2K","4K","HD" 等）
+	VideoDurationSeconds      int
+	VideoCount                int
 	RateMultiplier            float64
 	PricingAt                 time.Time             // 渠道分时定价使用的计费时刻
 	ServiceTier               string                // "priority","flex","" 等
@@ -1095,7 +1097,9 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 	var breakdown *CostBreakdown
 	var err error
 	switch resolved.Mode {
-	case BillingModePerRequest, BillingModeImage, BillingModeVideo:
+	case BillingModeVideo:
+		breakdown, err = s.calculateVideoCost(resolved, input)
+	case BillingModePerRequest, BillingModeImage:
 		breakdown, err = s.calculatePerRequestCost(resolved, input)
 	default: // BillingModeToken
 		breakdown, err = s.calculateTokenCost(resolved, input)
@@ -1107,6 +1111,24 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 		}
 	}
 	return breakdown, err
+}
+
+func (s *BillingService) calculateVideoCost(resolved *ResolvedPricing, input CostInput) (*CostBreakdown, error) {
+	resolution, ok := LookupVideoBillingResolution(input.SizeTier)
+	if !ok {
+		return nil, fmt.Errorf("video resolution is unavailable for model %s: %w", input.Model, ErrModelPricingUnavailable)
+	}
+	rate := input.Resolver.GetVideoTierPerSecond(resolved, resolution)
+	if rate <= 0 {
+		return nil, fmt.Errorf("video pricing is unavailable for model %s resolution %s: %w", input.Model, resolution, ErrModelPricingUnavailable)
+	}
+	count := input.VideoCount
+	if count <= 0 {
+		count = 1
+	}
+	duration := NormalizeVideoBillingDurationSecondsOrDefault(input.VideoDurationSeconds)
+	totalCost := rate * float64(duration) * float64(count)
+	return &CostBreakdown{TotalCost: totalCost, ActualCost: totalCost * input.RateMultiplier}, nil
 }
 
 // calculateTokenCost 按 token 区间计费

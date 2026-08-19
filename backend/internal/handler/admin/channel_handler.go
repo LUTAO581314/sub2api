@@ -59,7 +59,7 @@ type updateChannelRequest struct {
 type channelModelPricingRequest struct {
 	Platform         string                     `json:"platform" binding:"omitempty,max=50"`
 	Models           []string                   `json:"models" binding:"required,min=1,max=100"`
-	BillingMode      string                     `json:"billing_mode" binding:"omitempty,oneof=token per_request image"`
+	BillingMode      string                     `json:"billing_mode" binding:"omitempty,oneof=token per_request image video"`
 	InputPrice       *float64                   `json:"input_price" binding:"omitempty,min=0"`
 	OutputPrice      *float64                   `json:"output_price" binding:"omitempty,min=0"`
 	CacheWritePrice  *float64                   `json:"cache_write_price" binding:"omitempty,min=0"`
@@ -91,6 +91,7 @@ type pricingIntervalRequest struct {
 	CacheWritePrice *float64 `json:"cache_write_price"`
 	CacheReadPrice  *float64 `json:"cache_read_price"`
 	PerRequestPrice *float64 `json:"per_request_price"`
+	PerSecondPrice  *float64 `json:"per_second_price"`
 	SortOrder       int      `json:"sort_order"`
 }
 
@@ -156,6 +157,7 @@ type pricingIntervalResponse struct {
 	CacheWritePrice *float64 `json:"cache_write_price"`
 	CacheReadPrice  *float64 `json:"cache_read_price"`
 	PerRequestPrice *float64 `json:"per_request_price"`
+	PerSecondPrice  *float64 `json:"per_second_price"`
 	SortOrder       int      `json:"sort_order"`
 }
 
@@ -282,6 +284,7 @@ func intervalToResponse(iv service.PricingInterval) pricingIntervalResponse {
 		CacheWritePrice: iv.CacheWritePrice,
 		CacheReadPrice:  iv.CacheReadPrice,
 		PerRequestPrice: iv.PerRequestPrice,
+		PerSecondPrice:  iv.PerSecondPrice,
 		SortOrder:       iv.SortOrder,
 	}
 }
@@ -305,6 +308,7 @@ func pricingRequestToService(reqs []channelModelPricingRequest) []service.Channe
 				CacheWritePrice: iv.CacheWritePrice,
 				CacheReadPrice:  iv.CacheReadPrice,
 				PerRequestPrice: iv.PerRequestPrice,
+				PerSecondPrice:  iv.PerSecondPrice,
 				SortOrder:       iv.SortOrder,
 			})
 		}

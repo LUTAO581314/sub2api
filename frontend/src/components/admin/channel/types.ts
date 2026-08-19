@@ -11,6 +11,7 @@ export interface IntervalFormEntry {
   cache_write_price: number | string | null
   cache_read_price: number | string | null
   per_request_price: number | string | null
+  per_second_price: number | string | null
   sort_order: number
 }
 
@@ -321,6 +322,7 @@ function validateIntervalPrices(iv: IntervalFormEntry, idx: number, t: Translate
     ['cacheWritePrice', iv.cache_write_price],
     ['cacheReadPrice', iv.cache_read_price],
     ['perRequestPrice', iv.per_request_price],
+    ['perSecondPrice', iv.per_second_price],
   ]
   for (const [key, val] of prices) {
     if (val != null && val !== '' && Number(val) < 0) {

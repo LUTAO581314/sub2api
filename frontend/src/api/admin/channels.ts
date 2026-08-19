@@ -18,6 +18,7 @@ export interface PricingInterval {
   cache_write_price: number | null
   cache_read_price: number | null
   per_request_price: number | null
+  per_second_price: number | null
   sort_order: number
 }
 
