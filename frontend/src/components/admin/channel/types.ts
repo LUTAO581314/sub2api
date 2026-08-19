@@ -188,6 +188,7 @@ export function apiIntervalsToForm(intervals: PricingInterval[]): IntervalFormEn
     cache_write_price: perTokenToMTok(iv.cache_write_price),
     cache_read_price: perTokenToMTok(iv.cache_read_price),
     per_request_price: iv.per_request_price,
+    per_second_price: iv.per_second_price,
     sort_order: iv.sort_order
   }))
 }
@@ -202,6 +203,7 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
     cache_write_price: mTokToPerToken(iv.cache_write_price),
     cache_read_price: mTokToPerToken(iv.cache_read_price),
     per_request_price: toNullableNumber(iv.per_request_price),
+    per_second_price: toNullableNumber(iv.per_second_price),
     sort_order: iv.sort_order
   }))
 }
