@@ -1,15 +1,11 @@
 <template>
   <div class="plaza-pricing-table overflow-x-auto" :style="accentStyle">
-    <table class="w-full min-w-[860px] table-fixed border-collapse text-sm tabular-nums">
+    <table class="w-full min-w-[560px] table-fixed border-collapse text-sm tabular-nums">
       <colgroup>
-        <col class="w-[22%]" />
-        <col class="w-[10%]" />
-        <col class="w-[10%]" />
-        <col class="w-[14%]" />
-        <col class="w-[10%]" />
-        <col class="w-[10%]" />
-        <col class="w-[14%]" />
-        <col class="w-[10%]" />
+        <col class="w-[32%]" />
+        <col class="w-[18%]" />
+        <col class="w-[18%]" />
+        <col class="w-[32%]" />
       </colgroup>
       <thead>
         <tr
@@ -23,24 +19,9 @@
           </th>
           <th colspan="3" class="pz-bg pt-2 text-center">
             <div class="pz-title border-b pb-2 font-semibold">
-              {{ t('modelPlaza.table.paidPrice') }}
-              <span class="pz-unit ml-1 normal-case font-normal">{{ t('modelPlaza.table.unitPerMillion') }}</span>
+              {{ priceMode === 'official' ? t('modelPlaza.table.officialPrice') : t('modelPlaza.table.paidPrice') }}
+              <span class="pz-unit ml-1 normal-case font-normal">{{ priceUnit }}</span>
             </div>
-          </th>
-          <th
-            colspan="3"
-            class="border-l border-gray-100 pt-2 text-center dark:border-dark-700/60"
-          >
-            <div class="border-b border-gray-200 pb-2 text-gray-400 dark:border-dark-600 dark:text-dark-500">
-              {{ t('modelPlaza.table.officialPrice') }}
-              <span class="ml-1 normal-case font-normal text-gray-400 dark:text-dark-500">{{ t('modelPlaza.table.unitPerMillion') }}</span>
-            </div>
-          </th>
-          <th
-            rowspan="2"
-            class="border-l border-gray-100 py-2.5 pl-3 pr-5 text-right align-middle dark:border-dark-700/60"
-          >
-            {{ t('modelPlaza.table.rate') }}
           </th>
         </tr>
         <tr
@@ -49,11 +30,6 @@
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.input') }}</th>
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.output') }}</th>
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.cache') }}</th>
-          <th class="border-l border-gray-100 px-3 py-2 font-medium dark:border-dark-700/60">
-            {{ t('modelPlaza.table.input') }}
-          </th>
-          <th class="px-3 py-2 font-medium">{{ t('modelPlaza.table.output') }}</th>
-          <th class="px-3 py-2 font-medium">{{ t('modelPlaza.table.cache') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -66,6 +42,12 @@
           <td class="border-r border-gray-100 py-2.5 pl-5 pr-4 align-middle dark:border-dark-700/60">
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="font-medium text-gray-900 dark:text-white">{{ m.name }}</span>
+              <span
+                v-if="savingsLabel(m)"
+                class="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/25 dark:text-emerald-300"
+              >
+                {{ savingsLabel(m) }}
+              </span>
               <span
                 v-if="platform && m.platform !== platform"
                 :class="[
@@ -82,6 +64,12 @@
                 {{ billingModeLabel(m) }}
               </span>
             </div>
+            <p
+              v-if="m.capabilities?.length"
+              class="mt-1.5 text-xs leading-5 text-gray-500 dark:text-dark-400"
+            >
+              {{ (m.capabilities ?? []).join('；') }}
+            </p>
           </td>
 
           <!-- token 计费:输入 / 输出(阶梯内联)/ 缓存(写/读) -->
@@ -94,10 +82,10 @@
                   class="whitespace-nowrap text-xs leading-5"
                 >
                   <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ tierLabel(iv) }}</span>
-                  {{ paidPerMillion(iv.input_price) }}
+                  {{ paidPerMillion(m, iv.input_price) }}
                 </div>
               </template>
-              <template v-else>{{ paidPerMillion(m.pricing?.input_price) }}</template>
+              <template v-else>{{ paidPerMillion(m, displayPrice(m, 'input_price')) }}</template>
             </td>
             <td class="pz-cell px-3 py-2.5 align-middle font-mono font-semibold text-gray-900 dark:text-gray-50">
               <template v-if="tokenIntervals(m).length">
@@ -107,24 +95,25 @@
                   class="whitespace-nowrap text-xs leading-5"
                 >
                   <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ tierLabel(iv) }}</span>
-                  {{ paidPerMillion(iv.output_price) }}
+                  {{ paidPerMillion(m, iv.output_price) }}
                 </div>
               </template>
-              <template v-else>{{ paidPerMillion(m.pricing?.output_price) }}</template>
+              <template v-else>{{ paidPerMillion(m, displayPrice(m, 'output_price')) }}</template>
             </td>
             <td class="pz-cell px-3 py-2.5 align-middle">
               <div
                 v-if="hasCachePricing(m)"
                 class="space-y-0.5 font-mono text-xs text-gray-800 dark:text-gray-200"
               >
-                <div>
+                <div v-if="hasBothCachePrices(m)">
                   <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ t('modelPlaza.table.cacheWrite') }}</span>
-                  {{ paidPerMillion(m.pricing?.cache_write_price) }}
+                  {{ paidPerMillion(m, displayPrice(m, 'cache_write_price')) }}
                 </div>
-                <div>
+                <div v-if="hasBothCachePrices(m)">
                   <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ t('modelPlaza.table.cacheRead') }}</span>
-                  {{ paidPerMillion(m.pricing?.cache_read_price) }}
+                  {{ paidPerMillion(m, displayPrice(m, 'cache_read_price')) }}
                 </div>
+                <div v-else>{{ paidPerMillion(m, singleCachePrice(m)) }}</div>
               </div>
               <span v-else class="text-gray-400 dark:text-dark-500">-</span>
             </td>
@@ -134,17 +123,17 @@
           <template v-else>
             <td colspan="3" class="pz-cell px-3 py-2.5 align-middle">
               <div
-                v-if="requestIntervals(m).length"
+                v-if="mediaIntervals(m).length"
                 class="flex flex-wrap items-center gap-1.5"
               >
                 <span
-                  v-for="(iv, idx) in requestIntervals(m)"
+                  v-for="(iv, idx) in mediaIntervals(m)"
                   :key="idx"
                   class="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-800 dark:bg-dark-700/60 dark:text-gray-200"
                 >
                   <span class="font-sans text-gray-400 dark:text-dark-500">{{ tierLabel(iv) }}</span>
-                  {{ paidRequestPrice(m, iv.per_request_price)
-                  }}<span class="font-sans text-gray-400 dark:text-dark-500">{{ perUnitSuffix(m) }}</span>
+                  {{ paidMediaPrice(m, iv)
+                  }}<span class="font-sans text-gray-400 dark:text-dark-500">{{ perUnitSuffix(m, iv) }}</span>
                 </span>
               </div>
               <template v-else-if="m.pricing?.per_request_price != null">
@@ -157,51 +146,6 @@
             </td>
           </template>
 
-          <!-- 官方价格(LiteLLM 参考价,不乘倍率) -->
-          <td
-            class="border-l border-gray-100 px-3 py-2.5 align-middle font-mono text-xs text-gray-500 dark:border-dark-700/60 dark:text-dark-400"
-          >
-            {{ official(m.official_pricing?.input_price) }}
-          </td>
-          <td class="px-3 py-2.5 align-middle font-mono text-xs text-gray-500 dark:text-dark-400">
-            {{ official(m.official_pricing?.output_price) }}
-          </td>
-          <td class="px-3 py-2.5 align-middle">
-            <div
-              v-if="m.official_pricing && hasOfficialCache(m.official_pricing)"
-              class="space-y-0.5 font-mono text-xs text-gray-500 dark:text-dark-400"
-            >
-              <div>
-                <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ t('modelPlaza.table.cacheWrite') }}</span>
-                {{ official(m.official_pricing.cache_write_price)
-                }}<template v-if="m.official_pricing.cache_write_1h_price != null"
-                  ><span class="font-sans text-gray-400 dark:text-dark-500"> (1h </span>{{ official(m.official_pricing.cache_write_1h_price)
-                  }}<span class="font-sans text-gray-400 dark:text-dark-500">)</span></template
-                >
-              </div>
-              <div>
-                <span class="mr-1 font-sans font-normal text-gray-400 dark:text-dark-500">{{ t('modelPlaza.table.cacheRead') }}</span>
-                {{ official(m.official_pricing.cache_read_price) }}
-              </div>
-            </div>
-            <span v-else class="text-gray-400 dark:text-dark-500">-</span>
-          </td>
-
-          <!-- 折扣倍率(生图独立倍率行展示独立倍率;专属倍率划线展示原倍率) -->
-          <td
-            class="border-l border-gray-100 py-2.5 pl-3 pr-5 text-right align-middle font-mono text-xs dark:border-dark-700/60"
-          >
-            <span
-              v-if="usesIndependentImageRate(m)"
-              class="font-bold text-gray-700 dark:text-gray-300"
-              >{{ requestRate(m) }}x</span
-            >
-            <template v-else-if="hasCustomRate">
-              <span class="mr-1 text-gray-400 line-through dark:text-dark-500">{{ rateMultiplier }}x</span>
-              <span class="font-bold text-primary-600 dark:text-primary-400">{{ effectiveRate }}x</span>
-            </template>
-            <span v-else class="font-bold text-gray-700 dark:text-gray-300">{{ effectiveRate }}x</span>
-          </td>
         </tr>
       </tbody>
     </table>
@@ -216,6 +160,7 @@ import { platformAccentColor, platformBadgeLightClass, platformLabel } from '@/u
 import {
   BILLING_MODE_TOKEN,
   BILLING_MODE_IMAGE,
+  BILLING_MODE_VIDEO,
   type BillingMode
 } from '@/constants/channel'
 import type { PlazaModel } from '@/api/modelPlaza'
@@ -225,13 +170,7 @@ const props = defineProps<{
   models: PlazaModel[]
   /** 分组平台;实付分区底色随平台着色,未知平台回退品牌青。 */
   platform?: string
-  /** 分组默认倍率。 */
-  rateMultiplier: number
-  /** 用户专属倍率;与默认不同,实付价按此计算并划线展示原倍率。 */
-  userRateMultiplier?: number | null
-  /** 生图独立倍率:true 时图片计费模型的实付倍率取 imageRateMultiplier,不取分组/专属倍率。 */
-  imageRateIndependent?: boolean
-  imageRateMultiplier?: number | null
+  priceMode?: 'retail' | 'official'
 }>()
 
 const { t } = useI18n()
@@ -240,11 +179,18 @@ const { t } = useI18n()
 const accentStyle = computed(() => ({ '--plaza-accent': platformAccentColor(props.platform ?? '') }))
 
 const PER_MILLION = 1_000_000
+const priceMode = computed(() => props.priceMode ?? 'retail')
+const priceUnit = computed(() => {
+  if (priceMode.value === 'official') {
+    return ' / 1M token'
+  }
+  return t('modelPlaza.table.unitPerMillion')
+})
 
 /**
  * 展示顺序:
- * 1. token 计费的排在前,按图/按次计费的沉到末尾——它们的官方 token 价与实付的按张/按次价不同量纲,混排无意义;
- * 2. 组内按官方输出价从高到低,无官方价的排最后;
+ * 1. token 计费的排在前,按图/按次计费的沉到末尾——不同计费单位混排无意义;
+ * 2. 组内按对外输出价从高到低,无价格的排最后;
  * 3. 同价按名称降序(新版本号在前,如 gpt-5.6 先于 gpt-5.5)。
  */
 const sortedModels = computed(() => {
@@ -252,8 +198,8 @@ const sortedModels = computed(() => {
     const ta = billingMode(a) === BILLING_MODE_TOKEN
     const tb = billingMode(b) === BILLING_MODE_TOKEN
     if (ta !== tb) return ta ? -1 : 1
-    const pa = a.official_pricing?.output_price ?? null
-    const pb = b.official_pricing?.output_price ?? null
+    const pa = a.pricing?.output_price ?? null
+    const pb = b.pricing?.output_price ?? null
     if (pa != null && pb != null && pa !== pb) return pb - pa
     if (pa != null && pb == null) return -1
     if (pa == null && pb != null) return 1
@@ -261,75 +207,112 @@ const sortedModels = computed(() => {
   })
 })
 
-const effectiveRate = computed(() => props.userRateMultiplier ?? props.rateMultiplier)
-const hasCustomRate = computed(
-  () => props.userRateMultiplier != null && props.userRateMultiplier !== props.rateMultiplier
-)
-
 function billingMode(m: PlazaModel): BillingMode {
   return (m.pricing?.billing_mode || BILLING_MODE_TOKEN) as BillingMode
 }
 
 function billingModeLabel(m: PlazaModel): string {
-  return billingMode(m) === BILLING_MODE_IMAGE
-    ? t('modelPlaza.table.perImage')
-    : t('modelPlaza.table.perRequest')
+  if (billingMode(m) === BILLING_MODE_IMAGE) return t('modelPlaza.table.perImage')
+  if (billingMode(m) === BILLING_MODE_VIDEO) {
+    const intervals = mediaIntervals(m)
+    const hasPerSecond = intervals.some((iv) => iv.per_second_price != null)
+    const hasPerRequest = intervals.some((iv) => iv.per_request_price != null)
+    if (hasPerSecond && hasPerRequest) {
+      return `${t('modelPlaza.table.perSecond')} / ${t('modelPlaza.table.perRequest')}`
+    }
+    if (hasPerSecond) return t('modelPlaza.table.perSecond')
+  }
+  return t('modelPlaza.table.perRequest')
 }
 
 /** 价格统一保底 2 位小数,更长的有效小数原样保留。 */
 const MIN_DECIMALS = 2
 
-/** 实付价 = 渠道单价 × 生效倍率,按 $/1M token 展示。 */
-function paidPerMillion(value: number | null | undefined): string {
+/** 服务端已按实际计费口径计算最终零售价，按 $/1M token 展示。 */
+function paidPerMillion(m: PlazaModel, value: number | null | undefined): string {
   if (value == null) return '-'
-  return formatScaled(value * effectiveRate.value, PER_MILLION, MIN_DECIMALS)
+  return currencyPrefix(m) + formatScaled(value, PER_MILLION, MIN_DECIMALS).replace(/^\$/, '')
 }
 
-/** 图片计费模型且分组开启生图独立倍率:实付倍率取独立倍率,与计费口径一致。 */
-function usesIndependentImageRate(m: PlazaModel): boolean {
-  return billingMode(m) === BILLING_MODE_IMAGE && props.imageRateIndependent === true
+function currencyPrefix(m: PlazaModel): string {
+  return priceMode.value === 'official' && m.official_pricing?.currency === 'CNY' ? '¥' : '$'
 }
 
-/** 按次/按图片行的生效倍率。 */
-function requestRate(m: PlazaModel): number {
-  return usesIndependentImageRate(m) ? (props.imageRateMultiplier ?? 1) : effectiveRate.value
+function showingOfficial(m: PlazaModel): boolean {
+  const p = m.official_pricing
+  return priceMode.value === 'official' && p != null &&
+    [p.input_price, p.output_price, p.cache_write_price, p.cache_read_price].some((v) => v != null)
 }
 
-/** 按次 / 按图片单价(乘该行生效倍率,不换算 1M)。 */
-function paidRequestPrice(m: PlazaModel, value: number | null | undefined): string {
+function displayPrice(m: PlazaModel, field: 'input_price' | 'output_price' | 'cache_write_price' | 'cache_read_price'): number | null | undefined {
+  if (showingOfficial(m)) return m.official_pricing?.[field]
+  return m.pricing?.[field]
+}
+
+function savingsLabel(m: PlazaModel): string {
+  const official = m.official_pricing
+  const retail = m.pricing
+  if (!official || !retail || billingMode(m) !== BILLING_MODE_TOKEN) return ''
+  // Official references are mixed-currency (domestic CNY and international USD).
+  // Comparing their raw numeric values produces a fake discount.
+  if (official.currency !== 'USD') return ''
+  const pairs: Array<[number | null, number | null]> = [
+    [official.input_price, retail.input_price],
+    [official.output_price, retail.output_price],
+    [official.cache_write_price, retail.cache_write_price],
+    [official.cache_read_price, retail.cache_read_price]
+  ]
+  const rates = pairs
+    .filter(([reference, current]) => reference != null && current != null && reference > 0)
+    .map(([reference, current]) => ((reference! - current!) / reference!) * 100)
+  if (!rates.length) return ''
+  const average = rates.reduce((sum, rate) => sum + rate, 0) / rates.length
+  if (average <= 0) return t('modelPlaza.table.aboveOfficial', { percent: Math.abs(average).toFixed(1) })
+  return t('modelPlaza.table.saving', { percent: average.toFixed(1) })
+}
+
+/** 按次 / 按图片单价由服务端预先算好，不换算 1M。 */
+function paidRequestPrice(_m: PlazaModel, value: number | null | undefined): string {
   if (value == null) return '-'
-  return formatScaled(value * requestRate(m), 1, MIN_DECIMALS)
-}
-
-/** 官方参考价不乘倍率。 */
-function official(value: number | null | undefined): string {
-  if (value == null) return '-'
-  return formatScaled(value, PER_MILLION, MIN_DECIMALS)
+  return formatScaled(value, 1, MIN_DECIMALS)
 }
 
 /** 非 token 计费的单位后缀:按图片 → “/ 张”,按次 → “/ 次”。 */
-function perUnitSuffix(m: PlazaModel): string {
+function perUnitSuffix(m: PlazaModel, interval?: UserPricingInterval): string {
   return billingMode(m) === BILLING_MODE_IMAGE
     ? t('modelPlaza.table.perUnitImage')
+    : billingMode(m) === BILLING_MODE_VIDEO && interval?.per_second_price != null
+      ? t('modelPlaza.table.perUnitSecond')
     : t('modelPlaza.table.perUnitRequest')
 }
 
 function hasCachePricing(m: PlazaModel): boolean {
-  return m.pricing?.cache_write_price != null || m.pricing?.cache_read_price != null
+  return displayPrice(m, 'cache_write_price') != null || displayPrice(m, 'cache_read_price') != null
 }
 
-function hasOfficialCache(o: NonNullable<PlazaModel['official_pricing']>): boolean {
-  return o.cache_write_price != null || o.cache_read_price != null || o.cache_write_1h_price != null
+function hasBothCachePrices(m: PlazaModel): boolean {
+  return displayPrice(m, 'cache_write_price') != null && displayPrice(m, 'cache_read_price') != null
+}
+
+function singleCachePrice(m: PlazaModel): number | null | undefined {
+  return displayPrice(m, 'cache_read_price') ?? displayPrice(m, 'cache_write_price')
 }
 
 /** token 模式的阶梯定价(内联进输入/输出列)。 */
 function tokenIntervals(m: PlazaModel): UserPricingInterval[] {
-  return m.pricing?.intervals ?? []
+  return showingOfficial(m) ? [] : (m.pricing?.intervals ?? [])
 }
 
-/** 按次/按图模式的阶梯定价(仅保留配了按次价的档位)。 */
-function requestIntervals(m: PlazaModel): UserPricingInterval[] {
-  return (m.pricing?.intervals ?? []).filter((iv) => iv.per_request_price != null)
+/** 非 token 模型的档位价格。视频支持按秒或按次，且不能将两者互相折算。 */
+function mediaIntervals(m: PlazaModel): UserPricingInterval[] {
+  return (m.pricing?.intervals ?? []).filter(
+    (iv) => iv.per_request_price != null || iv.per_second_price != null
+  )
+}
+
+function paidMediaPrice(m: PlazaModel, interval: UserPricingInterval): string {
+  const price = interval.per_second_price ?? interval.per_request_price
+  return paidRequestPrice(m, price)
 }
 
 /** 档位标签:优先管理员配置的 tier_label,否则按 token 区间生成(≤200K / >200K / 200K–1M)。 */
